@@ -65,6 +65,7 @@
       PGUESS     ! next guess for surface pressure
 
    !dir$ attributes offload:mic :: mixtime
+   !dir$ attributes offload:mic :: curtime
    integer (int_kind) :: &! time indices for prognostic arrays
       curtime,           &! current time level  (n) 
       newtime,           &! next time level     (n+1)

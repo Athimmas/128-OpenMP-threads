@@ -540,6 +540,8 @@
 
    !$OMP END PARALLEL DO
 
+   !print *,"stuck before here"
+
    call POP_HaloUpdate(RHS,POP_haloClinic,  &
             POP_gridHorzLocCenter,          &
             POP_fieldKindScalar, errorCode, &
@@ -557,6 +559,8 @@
 !
 !-----------------------------------------------------------------------
 
+   !print *,"before solver"
+
    call POP_SolversRun(PSURF(:,:,newtime,:), RHS, errorCode)
 
    if (errorCode /= POP_Success) then
@@ -564,6 +568,8 @@
          'POP_BarotropicDriver: error in solver')
       return
    endif
+ 
+   !print *,"after solver"
 
 !-----------------------------------------------------------------------
 !

@@ -295,6 +295,8 @@
          return
       endif
 
+      !print *,"out of baroclinic"
+
 !-----------------------------------------------------------------------
 !
 !     compute overflow transports
@@ -347,6 +349,7 @@
          return
       endif
 
+      !print *,"out of barotropic"
 !-----------------------------------------------------------------------
 !
 !     update tracers using surface height at new time

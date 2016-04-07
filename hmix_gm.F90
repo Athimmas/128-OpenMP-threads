@@ -3755,35 +3755,8 @@
               enddo
       enddo
   
-      if(my_task == master_task)then
-
-      do i=1,ny_block
-       do j=1,nx_block
-
-          if( COMPUTE_TLT(i,j) ) print *,i,j
-
-       enddo
-      enddo
-
-     endif
-
- 
-
 #ifdef CCSMCOUPLED
 #ifndef _HIRES
-
-      if(my_task == master_task)then
-
-      do i=1,ny_block
-       do j=1,nx_block
-
-          if( COMPUTE_TLT(i,j) ) print *,"At DEPTH comp",i,j
-
-       enddo
-      enddo
-
-     endif
-
 
       if ( any(COMPUTE_TLT) ) then
         print *,"Incorrect DIABATIC_DEPTH value in TLT computation"
@@ -3933,6 +3906,22 @@
 
       enddo
 
+
+    if(my_task == master_task)then
+     do j=1,ny_block
+      do i=1,nx_block
+           if(COMPUTE_TLT(i,j)) then 
+             print *,i,j,bid
+             exit 
+           endif
+      enddo
+     enddo
+    endif 
+
+      !if(my_task == master_task)then           
+            !print *,"compute DIABATIC DEPTH is",TLT%DIABATIC_DEPTH(1,14,1),WORK(1,14)
+            !print *,"compute_TLT is",COMPUTE_TLT(1,14)
+      !endif
 
       !end_time = omp_get_wtime()
 

@@ -611,21 +611,6 @@
 
 !---------------------------------------------------------------------------------------------------------------------------------------
 
-
-
-   if(nsteps_run == 1)then 
-         do iblock = 1,nblocks_clinic
-            do k=1,km
-                call hdifft(k, WORKN_HOST(:,:,:,k,iblock),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
-            enddo
-          enddo
-
-                VDC_GM_HOST = VDC_GM
-                VDC_HOST = VDC
-   endif 
-
-
-
    if(itsdone == 0) then   
    !dir$ offload_transfer target(mic:1)  nocopy(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,SF_SLX,SF_SLY : alloc_if(.true.) free_if(.false.)) &
    !dir$ in(KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,WORKN_PHI,WTOP_ISOP,WBOT_ISOP,TRACER,UVEL,VVEL: alloc_if(.true.) free_if(.false.) )  
@@ -635,7 +620,7 @@
 
    !dir$ offload begin target(mic:1)in(TRACER,UVEL,VVEL,this_block,hmix_tracer_itype,tavg_HDIFE_TRACER,tavg_HDIFN_TRACER,tavg_HDIFB_TRACER) &
    !dir$ in(lsubmesoscale_mixing,dt,dtu,HYX,HXY,RZ_SAVE,RX,RY,TX,TY,TZ,KMT,KMTE,KMTN,implicit_vertical_mix,vmix_itype,KPP_HBLT,HMXL) &
-   !dir$ in(HYXW,HXYS,UIT,VIT,RB,RBR,BL_DEPTH,mixtime,nblocks_clinic,blocks_clinic,nblocks_tot) &
+   !dir$ in(HYXW,HXYS,UIT,VIT,RB,RBR,BL_DEPTH,mixtime,nblocks_clinic,blocks_clinic,nblocks_tot,curtime) &
    !dir$ in(kappa_isop_type,kappa_thic_type, kappa_freq,slope_control,SLA_SAVE,nsteps_total, ah,ah_bolus, ah_bkg_bottom,ah_bkg_srfbl) &
    !dir$ in(slm_r,slm_b,compute_kappa,BUOY_FREQ_SQ,SIGMA_TOPO_MASK,dz,dzw,dzwr,zw,dzr,DYT,DXT,HUW,HUS,TAREA_R,HTN,HTE,pi,zt) &
    !dir$ in(luse_const_horiz_len_scale,hor_length_scale,TIME_SCALE,efficiency_factor,TLT,my_task,master_task) & 
@@ -651,6 +636,7 @@
    
   do iblock = 1,nblocks_clinic
       this_block = get_block(blocks_clinic(iblock),iblock)
+      !print *,"working on ID",thread_id 
       do k = 1,km
 
       call hdifft(k, WORKN_PHI(:,:,:,k,thread_id),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
@@ -662,6 +648,18 @@
 
   !dir$ end offload
 
+   !if(nsteps_run == 1)then
+         !do iblock = 1,nblocks_clinic
+            !do k=1,km
+                !call hdifft(k, WORKN_HOST(:,:,:,k,iblock),TRACER(:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock),this_block)
+            !enddo
+          !enddo
+
+          !VDC_GM_HOST = VDC_GM
+          !VDC_HOST = VDC
+   !endif
+
+   print *,"out of offload"
 
 !-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
