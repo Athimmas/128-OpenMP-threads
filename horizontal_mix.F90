@@ -42,6 +42,7 @@
    use hmix_gm_submeso_share, only: init_meso_mixing, tracer_diffs_and_isopyc_slopes
    use prognostic
    use vertical_mix
+   use omp_lib
 
    implicit none
    private
@@ -55,6 +56,32 @@
 
 !EOP
 !BOC
+
+! !PUBLIC VARIABLES
+
+  !dir$ attributes offload:mic :: hmix_tracer_itype
+  integer (POP_i4) , public :: hmix_tracer_itype !users choice for type of mixing
+
+  !dir$ attributes offload:mic :: tavg_HDIFE_TRACER
+  !dir$ attributes offload:mic :: tavg_HDIFN_TRACER
+  !dir$ attributes offload:mic :: tavg_HDIFB_TRACER
+  integer (POP_i4) ,public ,dimension(nt) :: &
+      tavg_HDIFE_TRACER,            &! tavg id for east face diffusive flux of tracer
+      tavg_HDIFN_TRACER,            &! tavg id for north face diffusive flux of tracer
+      tavg_HDIFB_TRACER              ! tavg id for bottom face diffusive flux of tracer
+
+   !dir$ attributes offload:mic :: tavg_HDIFS
+   !dir$ attributes offload:mic :: tavg_HDIFT
+   integer (POP_i4),public ::            &
+      hmix_momentum_itype,          &! users choice for type of mixing
+      tavg_HDIFT,                   &! tavg id for horizontal diffusion
+      tavg_HDIFS                     ! tavg id for horizontal diffusion
+
+
+   !dir$ attributes offload:mic :: lsubmesoscale_mixing
+   logical (log_kind) ,public ::    &
+      lsubmesoscale_mixing           ! if true, submesoscale mixing is on
+  
 !-----------------------------------------------------------------------
 !
 !  horizontal mixing choices
@@ -69,19 +96,18 @@
       hmix_tracer_type_del4 = 2,    &
       hmix_tracer_type_gm   = 3
 
-   integer (POP_i4) ::            &
-      hmix_momentum_itype,          &! users choice for type of mixing
-      hmix_tracer_itype,            &! users choice for type of mixing
-      tavg_HDIFT,                   &! tavg id for horizontal diffusion
-      tavg_HDIFS                     ! tavg id for horizontal diffusion
+   !integer (POP_i4) ::            &
+      !hmix_momentum_itype,          &! users choice for type of mixing
+      !tavg_HDIFT,                   &! tavg id for horizontal diffusion
+      !tavg_HDIFS                     ! tavg id for horizontal diffusion
 
-   integer (POP_i4), dimension(nt) :: &
-      tavg_HDIFE_TRACER,            &! tavg id for east face diffusive flux of tracer
-      tavg_HDIFN_TRACER,            &! tavg id for north face diffusive flux of tracer
-      tavg_HDIFB_TRACER              ! tavg id for bottom face diffusive flux of tracer
+!   integer (POP_i4), dimension(nt) :: &
+!      tavg_HDIFE_TRACER,            &! tavg id for east face diffusive flux of tracer
+!      tavg_HDIFN_TRACER,            &! tavg id for north face diffusive flux of tracer
+!      tavg_HDIFB_TRACER              ! tavg id for bottom face diffusive flux of tracer
 
-   logical (log_kind) ::            &
-      lsubmesoscale_mixing           ! if true, submesoscale mixing is on
+!   logical (log_kind) ::            &
+!      lsubmesoscale_mixing           ! if true, submesoscale mixing is on
 
 
 !-----------------------------------------------------------------------
@@ -459,6 +485,7 @@
 ! !IROUTINE: hdifft
 ! !INTERFACE:
 
+ !dir$ attributes offload: mic :: hdifft 
  subroutine hdifft(k, HDTK, TMIX, UMIX, VMIX, this_block)
 
 ! !DESCRIPTION:
@@ -497,12 +524,16 @@
 !-----------------------------------------------------------------------
 
    integer (POP_i4) :: &
-      bid                 ! local block id
+      bid,kk              ! local block id
 
    real (POP_r8), dimension(nx_block,ny_block) :: &
      WORK                 ! temporary to hold tavg field
-   real (POP_r8), dimension(nx_block,ny_block,nt) :: &
-      TDTK                ! Hdiff(T) for nth tracer at level k from submeso_flux code
+   real (POP_r8), dimension(nx_block,ny_block,nt,km) :: &
+      TDTK,HDTK_BUF       ! Hdiff(T) for nth tracer at level k from submeso_flux code
+
+   real (POP_r8) :: &
+      start_time,end_time ! Timers
+
 
 !-----------------------------------------------------------------------
 !
@@ -510,42 +541,87 @@
 !
 !-----------------------------------------------------------------------
 
+   !if(my_task == master_task)then
+   !call flush(6)
+   !print *,"hi"
+   !call flush(6)
+   !endif   
+
    bid = this_block%local_id
 
-   call timer_start(timer_hdifft, block_id=bid)
 
    HDTK = c0
 
    select case (hmix_tracer_itype)
-   case (hmix_tracer_type_del2)
-      call hdifft_del2(k, HDTK, TMIX, tavg_HDIFE_TRACER, tavg_HDIFN_TRACER, this_block)
-   case (hmix_tracer_type_del4)
-      call hdifft_del4(k, HDTK, TMIX, tavg_HDIFE_TRACER, tavg_HDIFN_TRACER, this_block)
+   !case (hmix_tracer_type_del2)
+      !print *,"2 is called" 
+      !call hdifft_del2(k, HDTK, TMIX, tavg_HDIFE_TRACER, tavg_HDIFN_TRACER, this_block)
+   !case (hmix_tracer_type_del4)
+      !print *,"4 is called"
+      !call hdifft_del4(k, HDTK, TMIX, tavg_HDIFE_TRACER, tavg_HDIFN_TRACER, this_block)
    case (hmix_tracer_type_gm)
       if (k == 1) then
-	call tracer_diffs_and_isopyc_slopes(TMIX, this_block)
+        !start_time = omp_get_wtime() 
+        call tracer_diffs_and_isopyc_slopes(TMIX, this_block)
+        !end_time = omp_get_wtime()
+        !print *,"time at tracer_diffs 1 is ",end_time - start_time   
       endif
-      call hdifft_gm(k, HDTK, TMIX, UMIX, VMIX, tavg_HDIFE_TRACER, &
-                     tavg_HDIFN_TRACER, tavg_HDIFB_TRACER, this_block)
+
+      if (k == 1) then
+         !start_time = omp_get_wtime()
+
+         call hdifft_gm(1, HDTK_BUF(:,:,:,1), TMIX, UMIX, VMIX, tavg_HDIFE_TRACER, &
+                         tavg_HDIFN_TRACER, tavg_HDIFB_TRACER, this_block)
+
+         !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk)num_threads(4) 
+         do kk=2,km
+         call hdifft_gm(kk , HDTK_BUF(:,:,:,kk) , TMIX, UMIX,VMIX,tavg_HDIFE_TRACER, &
+                                 tavg_HDIFN_TRACER,tavg_HDIFB_TRACER,this_block)
+         enddo
+
+         !end_time = omp_get_wtime()
+
+         !print *,"time at hdifft_gm combined is ",end_time - start_time 
+                    
+      endif
+
+      !start_time = omp_get_wtime()  
+      HDTK = HDTK_BUF(:,:,:,k)
+      !end_time = omp_get_wtime()
+
+      !print *,"time at hdifft_gm is ",end_time - start_time
+ 
    end select
    
-   call timer_stop(timer_hdifft, block_id=bid)
   
-	
+
    if ( lsubmesoscale_mixing ) then
-       call timer_start(timer_submeso, block_id=this_block%local_id)
         if (.not. hmix_tracer_itype == hmix_tracer_type_gm) then
-	 if (k == 1) then
-	  call tracer_diffs_and_isopyc_slopes(TMIX, this_block)
-	 endif
-	endif
+         if (k == 1) then
+          !start_time = omp_get_wtime()
+          call tracer_diffs_and_isopyc_slopes(TMIX, this_block)
+          !end_time = omp_get_wtime()
+          !print *,"time at tracer_diffs 2 is ",end_time - start_time
+         endif
+        endif
         if (k == 1) then
-	 call submeso_sf(TMIX, this_block)
-	endif
-        call submeso_flux(k, TDTK, TMIX, tavg_HDIFE_TRACER, &
-                     tavg_HDIFN_TRACER, tavg_HDIFB_TRACER, this_block)
-	HDTK=HDTK+TDTK
-       call timer_stop(timer_submeso, block_id=this_block%local_id)
+         !start_time = omp_get_wtime()
+         call submeso_sf(TMIX, this_block)
+         !end_time = omp_get_wtime()
+         !print *,"time at submeso_sf is ",end_time - start_time
+        endif
+        if(k==1) then
+         !start_time = omp_get_wtime()
+        !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk)num_threads(4) 
+        do kk=1,km
+         call submeso_flux(kk, TDTK(:,:,:,kk), TMIX, tavg_HDIFE_TRACER, &
+                       tavg_HDIFN_TRACER, tavg_HDIFB_TRACER, this_block)
+        enddo
+        end_time = omp_get_wtime()
+        !print *,"time at submeso_flux is ",end_time - start_time
+        endif
+
+        HDTK=HDTK+TDTK(:,:,:,k)
    endif
    
   
@@ -557,25 +633,25 @@
 !
 !-----------------------------------------------------------------------
 
-   if (accumulate_tavg_now(tavg_HDIFT)) then
-     WORK = c0
-     if (partial_bottom_cells) then
-        where (k <= KMT(:,:,bid)) WORK = DZT(:,:,k,bid)*HDTK(:,:,1)
-     else
-        where (k <= KMT(:,:,bid)) WORK = dz(k)*HDTK(:,:,1)
-     endif
-     call accumulate_tavg_field(WORK,tavg_HDIFT,bid,k)
-   endif
+   !if (accumulate_tavg_now(tavg_HDIFT)) then
+     !WORK = c0
+     !if (partial_bottom_cells) then
+        !where (k <= KMT(:,:,bid)) WORK = DZT(:,:,k,bid)*HDTK(:,:,1)
+     !else
+        !where (k <= KMT(:,:,bid)) WORK = dz(k)*HDTK(:,:,1)
+     !endif
+     !call accumulate_tavg_field(WORK,tavg_HDIFT,bid,k)
+   !endif
 
-   if (accumulate_tavg_now(tavg_HDIFS)) then
-     WORK = c0
-     if (partial_bottom_cells) then
-        where (k <= KMT(:,:,bid)) WORK = DZT(:,:,k,bid)*HDTK(:,:,2)
-     else
-        where (k <= KMT(:,:,bid)) WORK = dz(k)*HDTK(:,:,2)
-     endif
-     call accumulate_tavg_field(WORK,tavg_HDIFS,bid,k)
-   endif
+   !if (accumulate_tavg_now(tavg_HDIFS)) then
+     !WORK = c0
+     !if (partial_bottom_cells) then
+        !where (k <= KMT(:,:,bid)) WORK = DZT(:,:,k,bid)*HDTK(:,:,2)
+     !else
+        !where (k <= KMT(:,:,bid)) WORK = dz(k)*HDTK(:,:,2)
+     !endif
+   !  call accumulate_tavg_field(WORK,tavg_HDIFS,bid,k)
+   !endif
 
 !-----------------------------------------------------------------------
 !EOC

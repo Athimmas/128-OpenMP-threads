@@ -19,7 +19,7 @@
    use kinds_mod
    use exit_mod
    use domain_size, only: nx_global, ny_global, block_size_x, block_size_y
-   use communicate, only: my_task
+   use communicate, only: my_task,master_task
 
    implicit none
    private
@@ -57,6 +57,7 @@
 
 ! !PUBLIC DATA MEMBERS:
 
+   !dir$ attributes offload:mic :: nblocks_tot
    integer (int_kind), public :: &
       nblocks_tot      ,&! total number of blocks in decomposition
       nblocks_x        ,&! tot num blocks in i direction
@@ -69,8 +70,9 @@
 !  module private data
 !
 !-----------------------------------------------------------------------
-
-   type (block), dimension(:), allocatable :: &
+  
+   !dir$ attributes offload:mic :: all_blocks
+   type (block), dimension(:), allocatable,public :: &
       all_blocks         ! block information for all blocks in domain
 
    integer (int_kind), dimension(:,:), allocatable, target :: &
@@ -279,6 +281,7 @@ end subroutine create_blocks
 ! !IROUTINE: get_block
 ! !INTERFACE:
 
+ !dir$ attributes offload:mic :: get_block
  function get_block(block_id,local_id)
 
 ! !DESCRIPTION:
@@ -308,7 +311,8 @@ end subroutine create_blocks
 !----------------------------------------------------------------------
 
    if (block_id < 1 .or. block_id > nblocks_tot) then
-      call exit_POP(sigAbort,'get_block: invalid block_id')
+     !call exit_POP(sigAbort,'get_block: invalid block_id')
+     if(my_task == master_task) print *,"error total",block_id,nblocks_tot
    endif
 
    get_block = all_blocks(block_id)

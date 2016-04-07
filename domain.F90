@@ -45,10 +45,12 @@
 
 ! !PUBLIC DATA MEMBERS:
 
+   !dir$ attributes offload:mic :: nblocks_clinic
    integer (int_kind), public :: &
       nblocks_clinic   ,&! actual number of blocks on this processor
       nblocks_tropic     !   in each distribution
 
+   !dir$ attributes offload:mic :: blocks_clinic
    integer (int_kind), dimension(:), pointer, public :: &
       blocks_clinic    ,&! block ids for local blocks in baroclinic dist
       blocks_tropic      ! block ids for local blocks in barotropic dist

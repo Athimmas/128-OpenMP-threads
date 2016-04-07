@@ -36,6 +36,7 @@
 
 ! !PUBLIC DATA MEMBERS:
 
+   !dir$ attributes offload:mic :: TRACER
    real (r8), dimension(nx_block,ny_block,km,nt,3,max_blocks_clinic), &
       target :: &
       TRACER     ! 3d tracer fields for all blocks at 3 time levels
@@ -43,6 +44,8 @@
    type (tracer_field), dimension(nt) :: &
       tracer_d   ! descriptors for each tracer
 
+   !dir$ attributes offload:mic :: UVEL
+   !dir$ attributes offload:mic :: VVEL
    real (r8), dimension(nx_block,ny_block,km,3,max_blocks_clinic), &
       target :: &
       UVEL,     &! 3d horizontal velocity for all blocks at 3 time lvls
@@ -61,6 +64,7 @@
       target :: &
       PGUESS     ! next guess for surface pressure
 
+   !dir$ attributes offload:mic :: mixtime
    integer (int_kind) :: &! time indices for prognostic arrays
       curtime,           &! current time level  (n) 
       newtime,           &! next time level     (n+1)

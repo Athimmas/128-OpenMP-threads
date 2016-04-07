@@ -21,37 +21,43 @@
    use POP_HaloMod 
 
    use kinds_mod, only: int_kind, r8, log_kind, r4, rtavg
-   use blocks, only: nx_block, ny_block, block, get_block
+   use blocks, only: nx_block, ny_block, block, get_block,all_blocks,nblocks_tot
 !   use distribution, only: 
    use domain_size
    use domain, only: nblocks_clinic, blocks_clinic, POP_haloClinic
    use constants, only: delim_fmt, blank_fmt, p5, field_loc_center,          &
        field_type_scalar, c0, c1, c2, grav, ndelim_fmt,                      &
-       hflux_factor, salinity_factor, salt_to_ppt
+       hflux_factor, salinity_factor, salt_to_ppt,pi,radian
    use prognostic, only: TRACER, UVEL, VVEL, max_blocks_clinic, km, mixtime, &
        RHO, newtime, oldtime, curtime, PSURF, nt
    use broadcast, only: broadcast_scalar
    use communicate, only: my_task, master_task
    use grid, only: FCOR, DZU, HUR, KMU, KMT, sfc_layer_type,                 &
-       sfc_layer_varthick, partial_bottom_cells, dz, DZT, CALCT, dzw, dzr
+       sfc_layer_varthick, partial_bottom_cells, dz, DZT, CALCT, dzw,        &
+       dzr,KMTE,KMTN,dzwr,zw,DYT,DXT,HUW,HUS,TAREA_R,HTN,HTE,zt,partial_bottom_cells, &
+       FCORT,TLAT
    use advection, only: advu, advt, comp_flux_vel_ghost
    use pressure_grad, only: lpressure_avg, gradp
-   use horizontal_mix, only: hdiffu, hdifft, iso_impvmixt_tavg
+   use horizontal_mix, only: hdiffu, hdifft, iso_impvmixt_tavg , hmix_tracer_itype, &
+                             tavg_HDIFE_TRACER,tavg_HDIFN_TRACER,tavg_HDIFB_TRACER, &
+                             lsubmesoscale_mixing,tavg_HDIFS,tavg_HDIFT
    use vertical_mix, only: vmix_coeffs, implicit_vertical_mix, vdiffu,       &
-       vdifft, impvmixt, impvmixu, impvmixt_correct, convad, impvmixt_tavg
-   use vmix_kpp, only: add_kpp_sources
+       vdifft, impvmixt, impvmixu, impvmixt_correct, convad, impvmixt_tavg,  &
+       vmix_itype,VDC_GM,VDC,VDC_GM_HOST,VDC_HOST,VDC_PHI 
+   use vmix_kpp, only: add_kpp_sources,KPP_HBLT,HMXL,zgrid,linertial
    use diagnostics, only: ldiag_cfl, cfl_check, ldiag_global,                &
        DIAG_KE_ADV_2D, DIAG_KE_PRESS_2D, DIAG_KE_HMIX_2D, DIAG_KE_VMIX_2D,   &
        DIAG_TRACER_HDIFF_2D, DIAG_PE_2D, DIAG_TRACER_ADV_2D,                 &
        DIAG_TRACER_SFC_FLX, DIAG_TRACER_VDIFF_2D, DIAG_TRACER_SOURCE_2D
    use movie, only: define_movie_field, movie_requested, update_movie_field
-   use state_mod, only: state
+   use state_mod, only: state,sigo,state_coeffs,to,so
    use ice, only: liceform, ice_formation, increment_tlast_ice
    use time_management, only: mix_pass, leapfrogts, impcor, c2dtu, beta,     &
-       gamma, c2dtt
+       gamma, c2dtt,dt,dtu , nsteps_total,eod_last
    use io_types, only: nml_in, nml_filename, stdout
    use tavg, only: define_tavg_field, accumulate_tavg_field, accumulate_tavg_now, &
-       tavg_method_max, tavg_method_min
+       tavg_method_max, tavg_method_min,ltavg_on,num_avail_tavg_fields
+   use time_management, only : nsteps_run
    use forcing_fields, only: STF, SMF, lsmft_avail, SMFT, TFW
    use forcing_shf, only: SHF_QSW
    use forcing_sfwf, only: lfw_as_salt_flx
@@ -62,9 +68,18 @@
        reset_passive_tracers, tavg_passive_tracers, &
        tavg_passive_tracers_baroclinic_correct, &
        set_interior_passive_tracers_3D
+   use hmix_gm_submeso_share, only: HYX,HXY,SLX,SLY,RZ_SAVE,RX,RY,TX,TY,TZ
+   use hmix_gm, only: WTOP_ISOP,WBOT_ISOP,HYXW,HXYS,UIT,VIT,RB,RBR,BL_DEPTH,              &
+                      KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,        &
+                      kappa_isop_type,kappa_thic_type, kappa_freq,slope_control,SLA_SAVE, &
+                      slm_r,slm_b,ah,ah_bolus,ah_bkg_bottom,ah_bkg_srfbl,BUOY_FREQ_SQ,    &
+                      SIGMA_TOPO_MASK,use_const_ah_bkg_srfbl,transition_layer_on,compute_kappa,&
+                      SF_SLX,SF_SLY,TLT 
    use exit_mod, only: sigAbort, exit_pop, flushm
    use overflows
    use overflow_type
+   use mix_submeso, only: SF_SUBM_X,SF_SUBM_Y,luse_const_horiz_len_scale,hor_length_scale, &
+                    TIME_SCALE,efficiency_factor,max_hor_grid_scale,FZTOP_SUBM
    use omp_lib
 
    implicit none
@@ -137,8 +152,17 @@
       movie_VVEL,         &! movie id for V velocity
       movie_RHO            ! movie id for in-situ density
 
-   real (r8), dimension(nx_block,ny_block,nt,km,16) :: &
+
+   integer  :: &
+      off_sig = 1       
+
+   !dir$ attributes offload:mic :: WORKN_PHI
+   real (r8), dimension(:,:,:,:,:),allocatable :: &
       WORKN_PHI
+
+   real (r8), dimension(:,:,:,:,:),allocatable :: &
+      WORKN_HOST 
+ 
 
 !EOC
 !***********************************************************************
@@ -423,6 +447,9 @@
 
    enddo
 
+   allocate(WORKN_PHI(nx_block,ny_block,nt,km,16))
+   allocate(WORKN_HOST(nx_block,ny_block,nt,km,16))
+
 !-----------------------------------------------------------------------
 !EOC
 
@@ -514,9 +541,9 @@
    type (block) ::        &
       this_block           ! block information for current block
 
-   integer (int_kind) :: thread_id
+   integer , save :: itsdone=0
 
-   real (r8) start_time,end_time
+   integer :: thread_id 
 
 !-----------------------------------------------------------------------
 !
@@ -549,6 +576,10 @@
 !
 !-----------------------------------------------------------------------
 
+   if(nsteps_run > 1) then
+   !!dir$ offload_wait target(mic:1)wait(off_sig)
+   endif
+
    !$OMP PARALLEL DO PRIVATE(iblock,this_block,k)
    do iblock = 1,nblocks_clinic
       this_block = get_block(blocks_clinic(iblock),iblock)
@@ -576,21 +607,63 @@
          endif
 
     enddo
+    !$OMP END PARALLEL DO
+
+!---------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+   if(nsteps_run == 1)then 
+         do iblock = 1,nblocks_clinic
+            do k=1,km
+                call hdifft(k, WORKN_HOST(:,:,:,k,iblock),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
+            enddo
+          enddo
+
+                VDC_GM_HOST = VDC_GM
+                VDC_HOST = VDC
+   endif 
+
+
+
+   if(itsdone == 0) then   
+   !dir$ offload_transfer target(mic:1)  nocopy(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,SF_SLX,SF_SLY : alloc_if(.true.) free_if(.false.)) &
+   !dir$ in(KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,WORKN_PHI,WTOP_ISOP,WBOT_ISOP,TRACER,UVEL,VVEL: alloc_if(.true.) free_if(.false.) )  
+   itsdone = itsdone + 1
+   endif 
  
 
-  start_time = omp_get_wtime()     
-  !$OMP PARALLEL DO PRIVATE(iblock,this_block,k)
-  
+   !dir$ offload begin target(mic:1)in(TRACER,UVEL,VVEL,this_block,hmix_tracer_itype,tavg_HDIFE_TRACER,tavg_HDIFN_TRACER,tavg_HDIFB_TRACER) &
+   !dir$ in(lsubmesoscale_mixing,dt,dtu,HYX,HXY,RZ_SAVE,RX,RY,TX,TY,TZ,KMT,KMTE,KMTN,implicit_vertical_mix,vmix_itype,KPP_HBLT,HMXL) &
+   !dir$ in(HYXW,HXYS,UIT,VIT,RB,RBR,BL_DEPTH,mixtime,nblocks_clinic,blocks_clinic,nblocks_tot) &
+   !dir$ in(kappa_isop_type,kappa_thic_type, kappa_freq,slope_control,SLA_SAVE,nsteps_total, ah,ah_bolus, ah_bkg_bottom,ah_bkg_srfbl) &
+   !dir$ in(slm_r,slm_b,compute_kappa,BUOY_FREQ_SQ,SIGMA_TOPO_MASK,dz,dzw,dzwr,zw,dzr,DYT,DXT,HUW,HUS,TAREA_R,HTN,HTE,pi,zt) &
+   !dir$ in(luse_const_horiz_len_scale,hor_length_scale,TIME_SCALE,efficiency_factor,TLT,my_task,master_task) & 
+   !dir$ in(max_hor_grid_scale,mix_pass,grav,zgrid,DZT,partial_bottom_cells,FCORT,linertial,ldiag_cfl,radian,TLAT,eod_last,all_blocks) &
+   !dir$ in(ltavg_on,num_avail_tavg_fields,sigo,state_coeffs,to,so,use_const_ah_bkg_srfbl,transition_layer_on,tavg_HDIFS,tavg_HDIFT) &
+   !dir$ out(WORKN_PHI:alloc_if(.false.) free_if(.false.)) inout(VDC,VDC_GM) &
+   !dir$ nocopy(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,SF_SLX,SF_SLY,WTOP_ISOP: alloc_if(.false.) free_if(.false.) ) &
+   !dir$ nocopy( WBOT_ISOP : alloc_if(.false.) free_if(.false.) )
+
+  !!$OMP PARALLEL DO PRIVATE(iblock,this_block,k)NUM_THREADS(16)
+
+  thread_id = 1  
+   
   do iblock = 1,nblocks_clinic
       this_block = get_block(blocks_clinic(iblock),iblock)
       do k = 1,km
 
-      call hdifft(k, WORKN_PHI(:,:,:,k,iblock),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
+      call hdifft(k, WORKN_PHI(:,:,:,k,thread_id),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
 
       enddo
+      thread_id = thread_id + 1
   enddo 
-  
-  end_time = omp_get_wtime() 
+  !!$OMP END PARALLEL DO 
+
+  !dir$ end offload
+
+
+!-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
    !$OMP PARALLEL DO PRIVATE(iblock,this_block,k,kp1,km1,WTK,WORK1,factor)
 
@@ -610,29 +683,30 @@
 !
 !-----------------------------------------------------------------------
 
-         if(k /= 1) then  
-         if (lsmft_avail) then
-            call vmix_coeffs(k,TRACER (:,:,:,:,mixtime,iblock), &
-                               UVEL   (:,:,:  ,mixtime,iblock), &
-                               VVEL   (:,:,:  ,mixtime,iblock), &
-                               UVEL   (:,:,:  ,curtime,iblock), &
-                               VVEL   (:,:,:  ,curtime,iblock), &
-                               RHO    (:,:,:  ,mixtime,iblock), &
-                               STF    (:,:,:          ,iblock), &
-                               SHF_QSW(:,:            ,iblock), &
-                               this_block, SMFT=SMFT(:,:,:,iblock))
-         else
-            call vmix_coeffs(k,TRACER (:,:,:,:,mixtime,iblock), &
-                               UVEL   (:,:,:  ,mixtime,iblock), &
-                               VVEL   (:,:,:  ,mixtime,iblock), &
-                               UVEL   (:,:,:  ,curtime,iblock), &
-                               VVEL   (:,:,:  ,curtime,iblock), &
-                               RHO    (:,:,:  ,mixtime,iblock), &
-                               STF    (:,:,:          ,iblock), &
-                               SHF_QSW(:,:            ,iblock), &
-                               this_block, SMF=SMF(:,:,:,iblock))
-         endif
-         endif
+
+         if(k /= 1) then 
+            if (lsmft_avail) then
+               call vmix_coeffs(k,TRACER (:,:,:,:,mixtime,iblock), &
+                                   UVEL   (:,:,:  ,mixtime,iblock), &
+                                   VVEL   (:,:,:  ,mixtime,iblock), &
+                                   UVEL   (:,:,:  ,curtime,iblock), &
+                                   VVEL   (:,:,:  ,curtime,iblock), &
+                                   RHO    (:,:,:  ,mixtime,iblock), &
+                                   STF    (:,:,:          ,iblock), &
+                                   SHF_QSW(:,:            ,iblock), &
+                                   this_block, SMFT=SMFT(:,:,:,iblock))
+            else
+              call vmix_coeffs(k,TRACER (:,:,:,:,mixtime,iblock), &
+                                   UVEL   (:,:,:  ,mixtime,iblock), &
+                                   VVEL   (:,:,:  ,mixtime,iblock), &
+                                   UVEL   (:,:,:  ,curtime,iblock), &
+                                   VVEL   (:,:,:  ,curtime,iblock), &
+                                   RHO    (:,:,:  ,mixtime,iblock), &
+                                   STF    (:,:,:          ,iblock), &
+                                   SHF_QSW(:,:            ,iblock), &
+                                   this_block, SMF=SMF(:,:,:,iblock))
+            endif
+           endif
 
 !-----------------------------------------------------------------------
 !
@@ -927,6 +1001,7 @@
 
    endif
 
+
 !-----------------------------------------------------------------------
 !
 !  now loop over blocks to do momentum equations
@@ -989,6 +1064,8 @@
                         DHU (:,:,iblock),           &
                         this_block)
 
+ 
+
 !-----------------------------------------------------------------------
 !
 !        store forces temporarily in UVEL(newtime),VVEL(newtime).
@@ -1026,6 +1103,7 @@
          endif
 
       enddo ! vertical (k) loop
+
 
 !-----------------------------------------------------------------------
 !
@@ -1743,8 +1821,9 @@
 !-----------------------------------------------------------------------
 
    integer (int_kind) :: &
-      n,                 &! dummy tracer index
+      n,kk,              &! dummy tracer index
       bid                 ! local_block id
+
 
    real (r8), dimension(nx_block,ny_block,nt) :: &
       FT,                &! sum of terms in dT/dt for the nth tracer
@@ -1753,6 +1832,7 @@
    real (r8), dimension(nx_block,ny_block) :: &
       WORKSW
 
+  real (r8) start_time , end_time
 !-----------------------------------------------------------------------
 !
 !  initialize some arrays
@@ -1770,11 +1850,15 @@
 !
 !-----------------------------------------------------------------------
 
-
-   !call hdifft(k, WORKN, TMIX, UMIX, VMIX, this_block)
- 
    WORKN = WORKN_PHI(:,:,:,k,bid)
 
+   !if(my_task==master_task)then
+
+   !   open(unit=10,file="/home/aketh/ocn_correctness_data/changed.txt",status="unknown",position="append",action="write",form="formatted")
+   !   write(10),WORKN
+   !   close(10)
+
+   !endif
 
    FT = FT + WORKN
 
