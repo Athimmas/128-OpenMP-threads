@@ -65,6 +65,7 @@
    use exit_mod, only: sigAbort, exit_pop, flushm
    use overflows
    use overflow_type
+   use omp_lib
 
    implicit none
    private
@@ -515,6 +516,8 @@
 
    integer (int_kind) :: thread_id
 
+   real (r8) start_time,end_time
+
 !-----------------------------------------------------------------------
 !
 !  compute flux velocities in ghost cells
@@ -574,7 +577,8 @@
 
     enddo
  
-     
+
+  start_time = omp_get_wtime()     
   !$OMP PARALLEL DO PRIVATE(iblock,this_block,k)
   
   do iblock = 1,nblocks_clinic
@@ -585,7 +589,8 @@
 
       enddo
   enddo 
-
+  
+  end_time = omp_get_wtime() 
 
    !$OMP PARALLEL DO PRIVATE(iblock,this_block,k,kp1,km1,WTK,WORK1,factor)
 
