@@ -1338,12 +1338,12 @@
                         + SLY(i,j,2,kk_sub,kk,bid)**2)/DYT(i,j,bid)**2)) &
                         + eps
 
-                       if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. kk == 3 .and. kk_sub == kbt ) then
+                       if( my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. kk == 3 .and. kk_sub == ktp ) then
 
-                         print *, "SLA IS ktp,kbt",SLA_SAVE(i,j,ktp,kk,bid),SLA_SAVE(i,j,kbt,kk,bid) 
-                         print *, "SLX and SLY is", SLX(i,j,1,kk_sub,kk,bid),SLY(i,j,1,kk_sub,kk,bid)
-                         print *, "DXT and DYT is", DXT(i,j,bid),DYT(i,j,bid) 
-                         print *, "SLZ AND SLY 2 is", SLX(i,j,2,kk_sub,kk,bid),SLY(i,j,2,kk_sub,kk,bid)
+                         print *, "SLA IS ktp",SLA_SAVE(i,j,ktp,kk,bid)
+                         print *, "SLX and SLY is",SLX(i,j,1,ktp,kk,bid),SLY(i,j,1,ktp,kk,bid)
+                         print *, "DXT and DYT is", DXT(i,j,bid),DYT(i,j,bid)
+                         print *, "SLX AND SLY 2 is",SLX(i,j,2,ktp,kk,bid),SLY(i,j,2,ktp,kk,bid)
 
                        endif
 

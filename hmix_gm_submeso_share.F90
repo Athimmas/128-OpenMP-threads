@@ -237,6 +237,16 @@
       TEMP   = c0
 
 
+!      if(my_task == master_task .and. bid == 4 ) then
+
+!          print *, "SLY 1 is", SLY(64,54,1,1,3,bid)
+!          print *, "SLY 2 is", SLY(64,54,2,2,3,bid)
+
+!      endif
+
+        match = registry_match('init_gm')
+        print *,"match is ", match
+
         kn = 1
         ks = 2
 
@@ -326,7 +336,7 @@
 
 
        !start_time = omp_get_wtime()
-       match = registry_match('init_gm')
+
 !-------------------------------------------------------------------------
 !
 !
@@ -382,6 +392,14 @@
                     SLX(i,j,iwest ,kbt,kk,bid) = KMASK * RX(i,j,iwest ,kk,bid) / RZ(i,j)
                     SLY(i,j,jnorth,kbt,kk,bid) = KMASK * RY(i,j,jnorth,kk,bid) / RZ(i,j)
                     SLY(i,j,jsouth,kbt,kk,bid) = KMASK * RY(i,j,jsouth,kk,bid) / RZ(i,j)
+
+
+                       if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. kk == 3 ) then
+
+                         print *, "SLY AND SLY 2 is",SLY(64,54,2,1,3,4),SLY(64,54,2,2,3,4) 
+
+                       endif
+
 
 
                  endif
