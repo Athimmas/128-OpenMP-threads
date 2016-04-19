@@ -1337,6 +1337,16 @@
                         + (SLY(i,j,1,kk_sub,kk,bid)**2                   &
                         + SLY(i,j,2,kk_sub,kk,bid)**2)/DYT(i,j,bid)**2)) &
                         + eps
+
+                       if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. kk == 3 .and. kk_sub == kbt ) then
+
+                         print *, "SLA IS ktp,kbt",SLA_SAVE(i,j,ktp,kk,bid),SLA_SAVE(i,j,kbt,kk,bid) 
+                         print *, "SLX and SLY is", SLX(i,j,1,kk_sub,kk,bid),SLY(i,j,1,kk_sub,kk,bid)
+                         print *, "DXT and DYT is", DXT(i,j,bid),DYT(i,j,bid) 
+                         print *, "SLZ AND SLY 2 is", SLX(i,j,2,kk_sub,kk,bid),SLY(i,j,2,kk_sub,kk,bid)
+
+                       endif
+
                      
                      enddo
                   enddo         
@@ -3849,14 +3859,32 @@
               !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(4)SCHEDULE(DYNAMIC,16)
               do j=1,ny_block
                    do i=1,nx_block
+
+                      WORK(i,j) = c0
+
                       if (kk == ktp) then
                    
-                         WORK(i,j) = c0 
-                         if ( COMPUTE_TLT(i,j)  .and.  K_START(i,j) <= KMT(i,j,bid)  .and. &
+                   if ( COMPUTE_TLT(i,j)  .and.  K_START(i,j) <= KMT(i,j,bid) .and. &
                          K_START(i,j) == k ) then
-                         WORK(i,j) = max(SLA_SAVE(i,j,ktp,k,bid), &
-                         SLA_SAVE(i,j,kbt,k,bid)) * RB(i,j,bid)
+
+                         if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. k == 3) then
+
+                           print *,"Before ",WORK(i,j),TLT%DIABATIC_DEPTH(i,j,bid),reference_depth(kk),COMPUTE_TLT(i,j),k,kk
+                           print *,max(SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid)) * RB(i,j,bid)
+                           print *,SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid),RB(i,j,bid)
+
                          endif
+
+                         WORK(i,j) = max(SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid)) * RB(i,j,bid)
+
+                         if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. k == 3 ) then
+                           print *, "After ",WORK(i,j),TLT%DIABATIC_DEPTH(i,j,bid),reference_depth(kk),COMPUTE_TLT(i,j),k,kk
+                           print *, max(SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid)) * RB(i,j,bid)
+                           print *, SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid),RB(i,j,bid)
+
+                         endif
+
+                   endif
 
 
                       else
@@ -3907,16 +3935,16 @@
       enddo
 
 
-    if(my_task == master_task)then
-     do j=1,ny_block
-      do i=1,nx_block
-           if(COMPUTE_TLT(i,j)) then 
-             print *,i,j,bid
-             exit 
-           endif
-      enddo
-     enddo
-    endif 
+    !if(my_task == master_task)then
+     !do j=1,ny_block
+      !do i=1,nx_block
+           !if(COMPUTE_TLT(i,j)) then 
+             !print *,i,j,bid
+             !exit 
+           !endif
+      !enddo
+    !enddo
+    !endif 
 
       !if(my_task == master_task)then           
             !print *,"compute DIABATIC DEPTH is",TLT%DIABATIC_DEPTH(1,14,1),WORK(1,14)

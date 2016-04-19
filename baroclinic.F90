@@ -612,7 +612,7 @@
 !---------------------------------------------------------------------------------------------------------------------------------------
 
    if(itsdone == 0) then   
-   !dir$ offload_transfer target(mic:1)  nocopy(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,SF_SLX,SF_SLY : alloc_if(.true.) free_if(.false.)) &
+   !dir$ offload_transfer target(mic:1)  in(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,SF_SLX,SF_SLY : alloc_if(.true.) free_if(.false.)) &
    !dir$ in(KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,WORKN_PHI,WTOP_ISOP,WBOT_ISOP,TRACER,UVEL,VVEL: alloc_if(.true.) free_if(.false.) )  
    itsdone = itsdone + 1
    endif 
@@ -636,7 +636,6 @@
    
   do iblock = 1,nblocks_clinic
       this_block = get_block(blocks_clinic(iblock),iblock)
-      print *,"input is",blocks_clinic(iblock),iblock
       do k = 1,km
 
       call hdifft(k, WORKN_PHI(:,:,:,k,iblock),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
