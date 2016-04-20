@@ -389,17 +389,8 @@
                     SLX(i,j,iwest ,kbt,kk,bid) = KMASK * RX(i,j,iwest ,kk,bid) / RZ(i,j)
                     SLY(i,j,jnorth,kbt,kk,bid) = KMASK * RY(i,j,jnorth,kk,bid) / RZ(i,j)
                     SLY(i,j,jsouth,kbt,kk,bid) = KMASK * RY(i,j,jsouth,kk,bid) / RZ(i,j)
-
-
-                       if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. kk == 3 ) then
-
-                         print *, "SLY AND SLY 2 is",SLY(64,54,2,1,3,4),SLY(64,54,2,2,3,4) 
-
-                       endif
-
-
-
-                 endif
+          
+                  endif  
 
 !-----------------------------------------------------------------------
 !
@@ -528,7 +519,7 @@
         if(k==1)then
           if(.not. registry_match('init_gm')) then
           do n=3,nt 
-           !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk,n,j,i)collapse(3)num_threads(4)
+           !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk,n,j,i)collapse(2)num_threads(4)
            do kk=1,km-1
              do j=1,ny_block
                 do i=1,nx_block

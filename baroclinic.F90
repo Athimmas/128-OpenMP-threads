@@ -614,7 +614,7 @@
 
 
    if(itsdone == 0) then   
-   !dir$ offload_transfer target(mic:1)  in(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,SF_SLX,SF_SLY : alloc_if(.true.) free_if(.false.)) &
+   !dir$ offload_transfer target(mic:1)  in(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,SF_SLX,SF_SLY,registry_storage : alloc_if(.true.) free_if(.false.)) &
    !dir$ in(KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,WTOP_ISOP,WBOT_ISOP,TRACER,UVEL,VVEL: alloc_if(.true.) free_if(.false.) ) &
    !dir$ nocopy(WORKN_PHI : alloc_if(.true.) free_if(.false.) ) 
    itsdone = itsdone + 1
@@ -626,18 +626,21 @@
    !dir$ in(HYXW,HXYS,UIT,VIT,RB,RBR,BL_DEPTH,mixtime,nblocks_clinic,nblocks_tot,curtime) &
    !dir$ in(kappa_isop_type,kappa_thic_type, kappa_freq,slope_control,SLA_SAVE,nsteps_total, ah,ah_bolus, ah_bkg_bottom,ah_bkg_srfbl) &
    !dir$ in(slm_r,slm_b,compute_kappa,BUOY_FREQ_SQ,SIGMA_TOPO_MASK,dz,dzw,dzwr,zw,dzr,DYT,DXT,HUW,HUS,TAREA_R,HTN,HTE,pi,zt) &
-   !dir$ in(luse_const_horiz_len_scale,hor_length_scale,TIME_SCALE,efficiency_factor,TLT,my_task,master_task,registry_storage) & 
+   !dir$ in(luse_const_horiz_len_scale,hor_length_scale,TIME_SCALE,efficiency_factor,TLT,my_task,master_task) & 
    !dir$ in(max_hor_grid_scale,mix_pass,grav,zgrid,DZT,partial_bottom_cells,FCORT,linertial,ldiag_cfl,radian,TLAT,eod_last,all_blocks) &
    !dir$ in(ltavg_on,num_avail_tavg_fields,sigo,state_coeffs,to,so,use_const_ah_bkg_srfbl,transition_layer_on,tavg_HDIFS,tavg_HDIFT) &
    !dir$ out(WORKN_PHI:alloc_if(.false.) free_if(.false.)) inout(VDC,VDC_GM) in(blocks_clinic : LENGTH(16) alloc_if(.true.) free_if(.false.) )&
    !dir$ nocopy(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,SF_SLX,SF_SLY,WTOP_ISOP: alloc_if(.false.) free_if(.false.) ) &
-   !dir$ nocopy( WBOT_ISOP : alloc_if(.false.) free_if(.false.) )
+   !dir$ nocopy( WBOT_ISOP,registry_storage : alloc_if(.false.) free_if(.false.) )
 
  
   !$OMP PARALLEL DO PRIVATE(iblock,this_block,k)NUM_THREADS(16)
   do iblock = 1,nblocks_clinic
       this_block = get_block(blocks_clinic(iblock),iblock)
       do k = 1,km
+
+     !if(my_task == master_task) then 
+     !endif
 
       call hdifft(k, WORKN_PHI(:,:,:,k,iblock),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
 
