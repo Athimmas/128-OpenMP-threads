@@ -612,6 +612,7 @@
 
 !---------------------------------------------------------------------------------------------------------------------------------------
 
+
    if(itsdone == 0) then   
    !dir$ offload_transfer target(mic:1)  in(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,SF_SLX,SF_SLY : alloc_if(.true.) free_if(.false.)) &
    !dir$ in(KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,WTOP_ISOP,WBOT_ISOP,TRACER,UVEL,VVEL: alloc_if(.true.) free_if(.false.) ) &
@@ -629,24 +630,20 @@
    !dir$ in(max_hor_grid_scale,mix_pass,grav,zgrid,DZT,partial_bottom_cells,FCORT,linertial,ldiag_cfl,radian,TLAT,eod_last,all_blocks) &
    !dir$ in(ltavg_on,num_avail_tavg_fields,sigo,state_coeffs,to,so,use_const_ah_bkg_srfbl,transition_layer_on,tavg_HDIFS,tavg_HDIFT) &
    !dir$ out(WORKN_PHI:alloc_if(.false.) free_if(.false.)) inout(VDC,VDC_GM) in(blocks_clinic : LENGTH(16) alloc_if(.true.) free_if(.false.) )&
-   !dir$ in(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,SF_SLX,SF_SLY,WTOP_ISOP: alloc_if(.false.) free_if(.false.) ) &
-   !dir$ in( WBOT_ISOP : alloc_if(.false.) free_if(.false.) )
+   !dir$ nocopy(SLX,SLY,SF_SUBM_X,SF_SUBM_Y,KAPPA_ISOP,KAPPA_THIC,HOR_DIFF,KAPPA_VERTICAL,KAPPA_LATERAL,SF_SLX,SF_SLY,WTOP_ISOP: alloc_if(.false.) free_if(.false.) ) &
+   !dir$ nocopy( WBOT_ISOP : alloc_if(.false.) free_if(.false.) )
 
-  !!$OMP PARALLEL DO PRIVATE(iblock,this_block,k)NUM_THREADS(16)
-
-  thread_id = 1  
-   
+ 
+  !$OMP PARALLEL DO PRIVATE(iblock,this_block,k)NUM_THREADS(16)
   do iblock = 1,nblocks_clinic
-      print *,"imput is ",blocks_clinic(iblock),iblock 
       this_block = get_block(blocks_clinic(iblock),iblock)
       do k = 1,km
 
       call hdifft(k, WORKN_PHI(:,:,:,k,iblock),TRACER (:,:,:,:,mixtime,iblock),UVEL(:,:,:,mixtime,iblock), VVEL(:,:,:,mixtime,iblock), this_block)
 
       enddo
-      thread_id = thread_id + 1
   enddo 
-  !!$OMP END PARALLEL DO 
+  !$OMP END PARALLEL DO 
 
   !dir$ end offload
 
@@ -660,8 +657,6 @@
           !VDC_GM_HOST = VDC_GM
           !VDC_HOST = VDC
    !endif
-
-   print *,"out of offload"
 
    !GOD its working
 !-----------------------------------------------------------------------------------------------------------------------------------------------------------

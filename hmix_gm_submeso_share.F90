@@ -244,9 +244,6 @@
 
 !      endif
 
-        match = registry_match('init_gm')
-        print *,"match is ", match
-
         kn = 1
         ks = 2
 
