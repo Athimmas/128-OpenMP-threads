@@ -1322,8 +1322,8 @@
 
           !start_time = omp_get_wtime()
 
-          !!$OMP PARALLEL DO &
-          !!$OMP DEFAULT(SHARED)PRIVATE(kid,i,j,kk_sub,kk)NUM_THREADS(4)COLLAPSE(3)
+          !$OMP PARALLEL DO &
+          !$OMP DEFAULT(SHARED)PRIVATE(kid,i,j,kk_sub,kk)NUM_THREADS(48)COLLAPSE(3)
           do kk=1,km
             do kk_sub = ktp,kbt
                   do j=1,ny_block
@@ -1338,21 +1338,11 @@
                         + SLY(i,j,2,kk_sub,kk,bid)**2)/DYT(i,j,bid)**2)) &
                         + eps
 
-                       if( my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. kk == 3 .and. kk_sub == ktp ) then
-
-                         print *, "SLA IS ktp",SLA_SAVE(i,j,ktp,kk,bid)
-                         print *, "SLX and SLY is",SLX(i,j,1,ktp,kk,bid),SLY(i,j,1,ktp,kk,bid)
-                         print *, "DXT and DYT is", DXT(i,j,bid),DYT(i,j,bid)
-                         print *, "SLX AND SLY 2 is",SLX(i,j,2,ktp,kk,bid),SLY(i,j,2,ktp,kk,bid)
-
-                       endif
-
-                     
                      enddo
                   enddo         
             enddo
           enddo
-          !!$OMP END PARALLEL DO
+          !$OMP END PARALLEL DO
 
 
           !end_time = omp_get_wtime()
@@ -1476,7 +1466,7 @@
             enddo
           enddo
         else
-          !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk_sub,kk,j,i)NUM_THREADS(4)
+          !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk_sub,kk,j,i)NUM_THREADS(48)collapse(3)
           do kk_sub=ktp,kbt
             do kk=1,km
                do j=1,ny_block
@@ -1502,7 +1492,7 @@
                   kappa_thic_type == kappa_type_bfreq ) then
 
           !start_time = omp_get_wtime()
-          !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk_sub,kk,j,i)NUM_THREADS(4)collapse(3)schedule(dynamic,4)      
+          !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk_sub,kk,j,i)NUM_THREADS(48)collapse(3)schedule(dynamic,4)      
            do kk_sub=ktp,kbt
             do kk=1,km
              do j=1,ny_block
@@ -1513,7 +1503,7 @@
              enddo
             enddo
           enddo
-          !!$OMP END PARALLEL DO
+          !$OMP END PARALLEL DO
           !end_time = omp_get_wtime()
           !print *,"Loop time at kappa_thic_type == kappa_type_const else if is ",end_time - start_time
         else if ( kappa_thic_type == kappa_type_eg ) then
@@ -1569,7 +1559,7 @@
 !
 !-----------------------------------------------------------------------
 
-             !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i,dzw,dz_bottom,zt)NUM_THREADS(4)
+             !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i,dzw,dz_bottom,zt)NUM_THREADS(48)
              do j=1,ny_block
                    do i=1,nx_block
 
@@ -3547,7 +3537,7 @@
           call state( k, k+1, TMIX(:,:,k,1), TMIX(:,:,k,2), &
                       this_block, DRHODT=RHOT, DRHODS=RHOS )
 
-          !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(4) 
+          !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(48) 
           do j=1,ny_block
              do i=1,nx_block
 
@@ -3580,7 +3570,7 @@
 !-----------------------------------------------------------------------
 
       do k=1,km-1
-       !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(4)
+       !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(48)
        do j=1,ny_block
         do i=1,nx_block 
 
@@ -3614,7 +3604,7 @@
       enddo
 
       do k=1,km-1
-       !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(4)
+       !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(48)
        do j=1,ny_block
         do i=1,nx_block
   
@@ -3636,7 +3626,7 @@
 !-----------------------------------------------------------------------
 
       do k=2,km
-       !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(4)
+       !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j)NUM_THREADS(48)
        do j=1,ny_block
         do i=1,nx_block
  
@@ -3731,7 +3721,7 @@
       
       do k=1,km
 
-              !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(4) 
+              !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(48) 
               do j=1,ny_block
                    do i=1,nx_block
 
@@ -3784,7 +3774,7 @@
 !
 !-----------------------------------------------------------------------
 
-             !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(4)
+             !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(48)
              do j=1,ny_block
                    do i=1,nx_block
 
@@ -3801,7 +3791,7 @@
 
              do k=1,km-1
 
-             !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(4)
+             !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(48)
              do j=1,ny_block
                    do i=1,nx_block
 
@@ -3856,7 +3846,7 @@
 
         do kk=ktp,kbt
 
-              !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(4)SCHEDULE(DYNAMIC,16)
+              !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(48)SCHEDULE(DYNAMIC,16)
               do j=1,ny_block
                    do i=1,nx_block
 
@@ -3867,22 +3857,8 @@
                    if ( COMPUTE_TLT(i,j)  .and.  K_START(i,j) <= KMT(i,j,bid) .and. &
                          K_START(i,j) == k ) then
 
-                         if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. k == 3) then
-
-                           print *,"Before ",WORK(i,j),TLT%DIABATIC_DEPTH(i,j,bid),reference_depth(kk),COMPUTE_TLT(i,j),k,kk
-                           print *,max(SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid)) * RB(i,j,bid)
-                           print *,SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid),RB(i,j,bid)
-
-                         endif
 
                          WORK(i,j) = max(SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid)) * RB(i,j,bid)
-
-                         if(my_task == master_task .and. bid == 4 .and. i == 64 .and. j == 54 .and. k == 3 ) then
-                           print *, "After ",WORK(i,j),TLT%DIABATIC_DEPTH(i,j,bid),reference_depth(kk),COMPUTE_TLT(i,j),k,kk
-                           print *, max(SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid)) * RB(i,j,bid)
-                           print *, SLA_SAVE(i,j,ktp,k,bid),SLA_SAVE(i,j,kbt,k,bid),RB(i,j,bid)
-
-                         endif
 
                    endif
 
@@ -3971,7 +3947,7 @@
 
       do k=1,km
 
-             !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(4)
+             !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(48)
              do j=1,ny_block
                    do i=1,nx_block
 
@@ -3993,7 +3969,7 @@
               enddo
       enddo
 
-             !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(4)
+             !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(j,i)NUM_THREADS(48)
              do j=1,ny_block
                    do i=1,nx_block
 
@@ -4101,7 +4077,7 @@
       !start_time = omp_get_wtime() 
       bid = this_block%local_id
 
-     !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(k,kk,temp,j,i)num_threads(4)collapse(4)
+     !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(k,kk,temp,j,i)NUM_THREADS(48)collapse(4)
      do k=1,km
         do kk=1,2
            do temp=1,2 
@@ -4156,7 +4132,7 @@
 
         do kk=1,2
  
-          !!$OMP PARALLEL DO PRIVATE(I,J)DEFAULT(SHARED)NUM_THREADS(4) 
+          !$OMP PARALLEL DO PRIVATE(I,J)DEFAULT(SHARED)NUM_THREADS(48) 
           do j=1,ny_block
            !dir$ novector
            do i=1,nx_block
@@ -4255,7 +4231,7 @@
 
              enddo
           enddo
-          !!$OMP END PARALLEL DO
+          !$OMP END PARALLEL DO
         enddo
 
       enddo
@@ -4309,7 +4285,7 @@
 !-----------------------------------------------------------------------
 
       !start_time = omp_get_wtime()
-      !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j,k,kk,reference_depth)num_threads(4)SCHEDULE(DYNAMIC,6) 
+      !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j,k,kk,reference_depth)NUM_THREADS(48)SCHEDULE(DYNAMIC,6) 
       do k=1,km
 
         reference_depth(ktp) = zt(k) - p25 * dz(k)
@@ -4487,7 +4463,7 @@
 !     start of tapering
 !
 !-----------------------------------------------------------------------
-      !!$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j,k,kk,reference_depth)NUM_THREADS(4)
+      !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(i,j,k,kk,reference_depth)NUM_THREADS(48)
       do k=1,km
 
         reference_depth(ktp) = zt(k) - p25 * dz(k)

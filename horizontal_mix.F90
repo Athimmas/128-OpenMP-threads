@@ -561,10 +561,12 @@
       !call hdifft_del4(k, HDTK, TMIX, tavg_HDIFE_TRACER, tavg_HDIFN_TRACER, this_block)
    case (hmix_tracer_type_gm)
       if (k == 1) then
+
         !start_time = omp_get_wtime() 
         call tracer_diffs_and_isopyc_slopes(TMIX, this_block)
         !end_time = omp_get_wtime()
         !print *,"time at tracer_diffs 1 is ",end_time - start_time   
+      
       endif
 
       if (k == 1) then
@@ -573,7 +575,7 @@
          call hdifft_gm(1, HDTK_BUF(:,:,:,1), TMIX, UMIX, VMIX, tavg_HDIFE_TRACER, &
                          tavg_HDIFN_TRACER, tavg_HDIFB_TRACER, this_block)
 
-         !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk)num_threads(4) 
+         !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk)num_threads(59) 
          do kk=2,km
          call hdifft_gm(kk , HDTK_BUF(:,:,:,kk) , TMIX, UMIX,VMIX,tavg_HDIFE_TRACER, &
                                  tavg_HDIFN_TRACER,tavg_HDIFB_TRACER,this_block)
@@ -612,12 +614,12 @@
         endif
         if(k==1) then
          !start_time = omp_get_wtime()
-        !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk)num_threads(4) 
+        !$OMP PARALLEL DO DEFAULT(SHARED)PRIVATE(kk)num_threads(59) 
         do kk=1,km
          call submeso_flux(kk, TDTK(:,:,:,kk), TMIX, tavg_HDIFE_TRACER, &
                        tavg_HDIFN_TRACER, tavg_HDIFB_TRACER, this_block)
         enddo
-        end_time = omp_get_wtime()
+        !end_time = omp_get_wtime()
         !print *,"time at submeso_flux is ",end_time - start_time
         endif
 
